@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceRead · Emotion AI</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    /* ── Design tokens ───────────────────────────── */
+    :root {
+      --bg:          #0d0f14;
+      --surface:     #161a22;
+      --surface-2:   #1e2330;
+      --border:      rgba(255,255,255,0.08);
+      --text:        #f0f2f5;
+      --muted:       #7a8499;
+      --accent:      #5b6af0;
+      --accent-glow: rgba(91,106,240,0.25);
+      --happy:   #1d9e75; --angry:    #e24b4a;
+      --sad:     #378add; --surprise: #ef9f27;
+      --fear:    #7f77dd; --disgust:  #639922;
+      --neutral: #888780;
+      --radius:  14px;
+      --font-display: "Space Grotesk", sans-serif;
+      --font-body:    "Inter", sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ─────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(13,15,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 1.2rem; font-weight: 700;
+      color: var(--text); text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-badge {
+      font-size: 0.7rem; font-weight: 500; letter-spacing: 0.06em;
+      background: var(--accent-glow); color: var(--accent);
+      border: 1px solid var(--accent); border-radius: 100px;
+      padding: 3px 10px; text-transform: uppercase;
+    }
+
+    /* ── Hero ────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 5rem 1.5rem 3rem;
+      max-width: 700px; margin: 0 auto;
+    }
+    .hero-eyebrow {
+      font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 1rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: ""; flex: 1; max-width: 50px;
+      height: 1px; background: var(--accent);
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 700; line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+    .hero p {
+      color: var(--muted); font-size: 1.05rem;
+      max-width: 480px; margin: 0 auto;
+    }
+
+    /* ── Tabs ────────────────────────────────────── */
+    .tabs {
+      display: flex; gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px; padding: 4px;
+      max-width: 340px; margin: 3rem auto 2.5rem;
+    }
+    .tab-btn {
+      flex: 1; padding: 0.5rem 1rem;
+      border: none; border-radius: 100px;
+      font-family: var(--font-body); font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+      color: var(--muted); background: transparent;
+    }
+    .tab-btn.active {
+      background: var(--accent); color: #fff;
+    }
+
+    /* ── Main panels ─────────────────────────────── */
+    main { max-width: 900px; margin: 0 auto; padding: 0 1.5rem 5rem; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Upload card ─────────────────────────────── */
+    .upload-card {
+      background: var(--surface); border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 3rem 2rem; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .upload-card:hover, .upload-card.drag-over {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    }
+    .upload-icon {
+      font-size: 3rem; margin-bottom: 1rem; display: block;
+      user-select: none;
+    }
+    .upload-card h3 {
+      font-family: var(--font-display); font-size: 1.1rem;
+      margin-bottom: 0.4rem;
+    }
+    .upload-card p { color: var(--muted); font-size: 0.9rem; }
+    #file-input { display: none; }
+
+    /* ── Webcam ──────────────────────────────────── */
+    .webcam-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    #webcam-video, #webcam-canvas {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block; border-radius: var(--radius);
+    }
+    #webcam-canvas { position: absolute; top: 0; left: 0; }
+    .webcam-controls {
+      display: flex; gap: 12px; margin-top: 1rem;
+      justify-content: center; flex-wrap: wrap;
+    }
+
+    /* ── Buttons ─────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.65rem 1.5rem;
+      border: 1px solid var(--border); border-radius: 100px;
+      font-family: var(--font-body); font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--text); }
+    .btn-ghost:hover { background: var(--surface-2); }
+    .btn-danger { background: #e24b4a; color: #fff; border-color: #e24b4a; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Results ─────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem; margin-top: 2rem;
+    }
+    @media (max-width: 640px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .result-image-wrap {
+      border-radius: var(--radius); overflow: hidden;
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .result-image-wrap img {
+      width: 100%; display: block;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .result-card h3 {
+      font-family: var(--font-display); font-size: 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--muted); margin-bottom: 1rem;
+    }
+
+    /* Expression badge */
+    .expression-big {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .expr-emoji { font-size: 2.8rem; line-height: 1; }
+    .expr-name {
+      font-family: var(--font-display);
+      font-size: 1.8rem; font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .expr-conf {
+      font-size: 0.85rem; color: var(--muted); margin-top: 2px;
+    }
+
+    /* Bar chart for all scores */
+    .score-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 0.5rem; font-size: 0.8rem;
+    }
+    .score-label { width: 68px; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .score-bar-track {
+      flex: 1; height: 6px;
+      background: var(--surface-2); border-radius: 100px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%; border-radius: 100px;
+      transition: width 0.6s cubic-bezier(.22,.68,0,1.2);
+    }
+    .score-pct { width: 36px; color: var(--muted); font-size: 0.75rem; }
+
+    /* Multi-face selector */
+    .face-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .face-tab {
+      padding: 4px 12px; border-radius: 100px; cursor: pointer;
+      font-size: 0.8rem; font-weight: 500;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      transition: all 0.15s;
+    }
+    .face-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Loading overlay ─────────────────────────── */
+    .loading {
+      display: none; flex-direction: column; align-items: center; gap: 1rem;
+      padding: 3rem;
+    }
+    .loading.show { display: flex; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error / info banners ────────────────────── */
+    .banner {
+      padding: 0.85rem 1.2rem; border-radius: 10px;
+      font-size: 0.9rem; margin-top: 1rem; display: none;
+    }
+    .banner.show { display: block; }
+    .banner-error { background: rgba(226,75,74,0.12); color: #e24b4a; border: 1px solid rgba(226,75,74,0.3); }
+    .banner-info  { background: rgba(91,106,240,0.1); color: #a3aef9; border: 1px solid rgba(91,106,240,0.25); }
+
+    /* ── API Config strip ────────────────────────── */
+    .api-config {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .api-config label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .api-config input {
+      flex: 1; min-width: 180px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.4rem 0.75rem;
+      color: var(--text); font-size: 0.85rem; font-family: var(--font-body);
+    }
+    .api-config input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #888; flex-shrink: 0; transition: background 0.3s;
+    }
+    .status-dot.ok  { background: #1d9e75; }
+    .status-dot.err { background: #e24b4a; }
+
+    /* ── Emotions legend ─────────────────────────── */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      justify-content: center; margin-top: 3rem; padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.8rem; color: var(--muted);
+    }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ── Footer ──────────────────────────────────── */
+    footer {
+      text-align: center; padding: 2rem;
+      color: var(--muted); font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Responsive ──────────────────────────────── */
+    @media (max-width: 480px) {
+      nav { padding: 0.75rem 1rem; }
+      .hero { padding: 3rem 1rem 2rem; }
+      h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-logo" href="#"><span>Face</span>Read</a>
+  <span class="nav-badge">Deep Learning</span>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <p class="hero-eyebrow">CNN · 7 Expressions</p>
+  <h1>Read any <em>emotion</em> in a face</h1>
+  <p>Upload a photo or use your webcam. Our model detects Angry, Disgust, Fear, Happy, Sad, Surprise, and Neutral — in milliseconds.</p>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('upload')">📁 Upload</button>
+  <button class="tab-btn" onclick="switchTab('webcam')">📷 Webcam</button>
+</div>
+
+<!-- Main -->
+<main>
+
+  <!-- API config -->
+  <div class="api-config">
+    <span class="status-dot" id="status-dot"></span>
+    <label>API URL</label>
+    <input type="text" id="api-url" value="https://facial-expression-app-ekkd.onrender.com" placeholder="https://facial-expression-app-ekkd.onrender.com" />
+    <button class="btn btn-ghost" style="padding:0.4rem 1rem;font-size:0.8rem" onclick="pingAPI()">Test</button>
+  </div>
+
+  <!-- Upload panel -->
+  <div class="panel active" id="panel-upload">
+    <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span class="upload-icon">🖼️</span>
+      <h3>Drop an image here</h3>
+      <p>or click to browse · JPEG, PNG, WEBP</p>
+      <input type="file" id="file-input" accept="image/*" />
+    </div>
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn btn-primary" id="analyze-btn" onclick="analyzeUpload()" disabled>Analyze →</button>
+    </div>
+    <div class="banner banner-error" id="upload-error"></div>
+  </div>
+
+  <!-- Webcam panel -->
+  <div class="panel" id="panel-webcam">
+    <div class="webcam-wrap">
+      <video id="webcam-video" autoplay muted playsinline></video>
+      <canvas id="webcam-canvas"></canvas>
+    </div>
+    <div class="webcam-controls">
+      <button class="btn btn-primary" id="cam-start-btn" onclick="startCam()">Start camera</button>
+      <button class="btn btn-ghost" id="cam-capture-btn" onclick="captureAndAnalyze()" disabled>📸 Capture &amp; Analyze</button>
+      <button class="btn btn-danger" id="cam-stop-btn" onclick="stopCam()" disabled>Stop</button>
+    </div>
+    <div class="banner banner-error" id="cam-error"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:0.9rem">Detecting expressions…</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section" style="display:none">
+    <div class="results-grid">
+      <!-- Annotated image -->
+      <div class="result-image-wrap">
+        <img id="result-img" src="" alt="Analyzed image" />
+      </div>
+      <!-- Predictions -->
+      <div class="result-card">
+        <h3>Detected faces</h3>
+        <div class="face-tabs" id="face-tabs"></div>
+        <div id="face-detail"></div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem">
+      <button class="btn btn-ghost" onclick="reset()">← Try another</button>
+    </div>
+  </div>
+
+  <!-- Emotions legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--happy)"></div>Happy</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--angry)"></div>Angry</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sad)"></div>Sad</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--surprise)"></div>Surprise</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--fear)"></div>Fear</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--disgust)"></div>Disgust</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--neutral)"></div>Neutral</div>
+  </div>
+
+</main>
+
+<footer>
+  Built with TensorFlow · FastAPI · Pure HTML/CSS/JS &nbsp;·&nbsp; Responsive on every device
+</footer>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let selectedFile = null;
+let camStream    = null;
+let lastResult   = null;
+let activeFace   = 0;
+
+const EMOJI = { Angry:"😠", Disgust:"🤢", Fear:"😨", Happy:"😊", Sad:"😢", Surprise:"😲", Neutral:"😐" };
+const COLOR = { Angry:"#e24b4a", Disgust:"#639922", Fear:"#7f77dd", Happy:"#1d9e75", Sad:"#378add", Surprise:"#ef9f27", Neutral:"#888780" };
+
+// ── API URL helper ────────────────────────────────────────────────────────
+function apiBase() {
+  return (document.getElementById("api-url").value || "https://facial-expression-app-ekkd.onrender.com").replace(/\/$/, "");
+}
+
+async function pingAPI() {
+  const dot = document.getElementById("status-dot");
+  dot.className = "status-dot";
+  try {
+    const r = await fetch(apiBase() + "/health");
+    dot.className = r.ok ? "status-dot ok" : "status-dot err";
+  } catch { dot.className = "status-dot err"; }
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll(".tab-btn").forEach((b, i) =>
+    b.classList.toggle("active", ["upload","webcam"][i] === name)
+  );
+  document.querySelectorAll(".panel").forEach(p =>
+    p.classList.toggle("active", p.id === "panel-" + name)
+  );
+  reset();
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault(); dropZone.classList.remove("drag-over");
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith("image/")) setFile(f);
+});
+fileInput.addEventListener("change", () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+function setFile(f) {
+  selectedFile = f;
+  const reader = new FileReader();
+  reader.onload = e => {
+    dropZone.innerHTML = `<img src="${e.target.result}" style="max-height:220px;border-radius:8px;object-fit:contain" />`;
+  };
+  reader.readAsDataURL(f);
+  document.getElementById("analyze-btn").disabled = false;
+  showBanner("upload-error", "", false);
+}
+
+// ── Upload & analyze ──────────────────────────────────────────────────────
+async function analyzeUpload() {
+  if (!selectedFile) return;
+  const form = new FormData();
+  form.append("file", selectedFile);
+  await callAPI(() => fetch(apiBase() + "/predict", { method: "POST", body: form }));
+}
+
+// ── Webcam ────────────────────────────────────────────────────────────────
+async function startCam() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    const vid = document.getElementById("webcam-video");
+    vid.srcObject = camStream;
+    document.getElementById("cam-start-btn").disabled   = true;
+    document.getElementById("cam-capture-btn").disabled = false;
+    document.getElementById("cam-stop-btn").disabled    = false;
+    showBanner("cam-error", "", false);
+  } catch(e) {
+    showBanner("cam-error", "Camera access denied: " + e.message, true);
+  }
+}
+
+function stopCam() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  const vid = document.getElementById("webcam-video");
+  vid.srcObject = null;
+  document.getElementById("cam-start-btn").disabled   = false;
+  document.getElementById("cam-capture-btn").disabled = true;
+  document.getElementById("cam-stop-btn").disabled    = true;
+}
+
+async function captureAndAnalyze() {
+  const vid    = document.getElementById("webcam-video");
+  const canvas = document.createElement("canvas");
+  canvas.width  = vid.videoWidth;
+  canvas.height = vid.videoHeight;
+  canvas.getContext("2d").drawImage(vid, 0, 0);
+  const b64 = canvas.toDataURL("image/jpeg", 0.92);
+
+  await callAPI(() =>
+    fetch(apiBase() + "/predict-base64", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: b64 }),
+    })
+  );
+}
+
+// ── Generic API caller ────────────────────────────────────────────────────
+async function callAPI(fetchFn) {
+  setLoading(true);
+  hideResults();
+  try {
+    const r = await fetchFn();
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || "Server error"); }
+    lastResult = await r.json();
+    renderResults(lastResult);
+  } catch(e) {
+    const panel = document.getElementById("panel-upload").classList.contains("active") ? "upload-error" : "cam-error";
+    showBanner(panel, "Error: " + e.message, true);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Render results ────────────────────────────────────────────────────────
+function renderResults(data) {
+  document.getElementById("results-section").style.display = "block";
+  document.getElementById("result-img").src = data.annotated_image;
+
+  const tabsEl = document.getElementById("face-tabs");
+  tabsEl.innerHTML = "";
+
+  if (data.face_count === 0) {
+    document.getElementById("face-detail").innerHTML =
+      `<p style="color:var(--muted);font-size:0.9rem">No faces were detected. Try a clearer, well-lit photo.</p>`;
+    return;
+  }
+
+  data.faces.forEach((face, i) => {
+    const btn = document.createElement("button");
+    btn.className = "face-tab" + (i === 0 ? " active" : "");
+    btn.textContent = `Face ${i + 1}`;
+    btn.onclick = () => { activeFace = i; renderFaceDetail(data.faces[i]); document.querySelectorAll(".face-tab").forEach((b,j)=>b.classList.toggle("active",j===i)); };
+    tabsEl.appendChild(btn);
+  });
+
+  activeFace = 0;
+  renderFaceDetail(data.faces[0]);
+}
+
+function renderFaceDetail(face) {
+  const scores = face.all_scores;
+  const sorted = Object.entries(scores).sort((a,b) => b[1]-a[1]);
+  const barsHtml = sorted.map(([expr, prob]) => {
+    const pct = (prob * 100).toFixed(1);
+    const color = COLOR[expr] || "#888";
+    const isTop = expr === face.expression;
+    return `
+      <div class="score-row">
+        <span class="score-label" style="${isTop ? "color:var(--text);font-weight:500" : ""}">${expr}</span>
+        <div class="score-bar-track">
+          <div class="score-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <span class="score-pct">${pct}%</span>
+      </div>`;
+  }).join("");
+
+  document.getElementById("face-detail").innerHTML = `
+    <div class="expression-big">
+      <span class="expr-emoji">${face.emoji}</span>
+      <div>
+        <div class="expr-name" style="color:${face.color}">${face.expression}</div>
+        <div class="expr-conf">${(face.confidence * 100).toFixed(1)}% confidence</div>
+      </div>
+    </div>
+    ${barsHtml}
+  `;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById("loading").classList.toggle("show", on);
+}
+function hideResults() {
+  document.getElementById("results-section").style.display = "none";
+}
+function showBanner(id, msg, show) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.toggle("show", show);
+}
+function reset() {
+  hideResults();
+  selectedFile = null;
+  lastResult   = null;
+  document.getElementById("file-input").value = "";
+  document.getElementById("analyze-btn").disabled = true;
+  dropZone.innerHTML = `
+    <span class="upload-icon">🖼️</span>
+    <h3>Drop an image here</h3>
+    <p>or click to browse · JPEG, PNG, WEBP</p>
+    <input type="file" id="file-input" accept="image/*" />`;
+  document.getElementById("file-input").addEventListener("change", () => {
+    if (document.getElementById("file-input").files[0])
+      setFile(document.getElementById("file-input").files[0]);
+  });
+  showBanner("upload-error", "", false);
+  showBanner("cam-error", "", false);
+}
+
+// Auto-ping on load
+pingAPI();
+</script>
+</body>
+</html>
