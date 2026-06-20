@@ -347,7 +347,7 @@
   <div class="api-config">
     <span class="status-dot" id="status-dot"></span>
     <label>API URL</label>
-    <input type="text" id="api-url" value="http://localhost:8000" placeholder="http://localhost:8000" />
+    <input type="text" id="api-url" value="https://facial-expression-app-ekkd.onrender.com" placeholder="https://facial-expression-app-ekkd.onrender.com" />
     <button class="btn btn-ghost" style="padding:0.4rem 1rem;font-size:0.8rem" onclick="pingAPI()">Test</button>
   </div>
 
@@ -434,7 +434,7 @@ const COLOR = { Angry:"#e24b4a", Disgust:"#639922", Fear:"#7f77dd", Happy:"#1d9e
 
 // ── API URL helper ────────────────────────────────────────────────────────
 function apiBase() {
-  return (document.getElementById("api-url").value || "http://localhost:8000").replace(/\/$/, "");
+  return (document.getElementById("api-url").value || "https://facial-expression-app-ekkd.onrender.com").replace(/\/$/, "");
 }
 
 async function pingAPI() {
